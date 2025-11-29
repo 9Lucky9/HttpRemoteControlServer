@@ -1,0 +1,44 @@
+.session-button {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+    transition: box-shadow .15s, transform .08s;
+}
+
+.session-button:hover {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .08);
+    transform: translateY(-2px);
+}
+
+.session-button:focus {
+    outline: 3px solid rgba(100, 160, 255, .6);
+    outline-offset: 2px;
+}
+
+.session-content {
+    display: flex;
+}
+
+.session-header {
+    display: flex;
+}
+
+.session-name {
+    margin: 0;
+    font-weight: 600;
+}
+
+.session-duration {
+    margin: 0px 20;
+}
+
+.session-sub {
+    margin: 6px 0 0;
+    color: #666;
+    font-size: 0.9em;
+}

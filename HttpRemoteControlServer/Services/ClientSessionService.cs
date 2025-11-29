@@ -11,6 +11,8 @@ public sealed class ClientSessionService : IClientSessionService
 {
     private ConcurrentDictionary<Guid, ClientSession> _sessions = 
         new ConcurrentDictionary<Guid, ClientSession>();
+    
+    public event EventHandler? StateChanged;
 
     public async Task<ClientSession> CreateClientSession(ClientRegistrationRequest clientRegistrationRequest)
     {
@@ -25,6 +27,7 @@ public sealed class ClientSessionService : IClientSessionService
             OpenedDate = DateTime.UtcNow
         };
         _sessions.TryAdd(clientSession.SessionId, clientSession);
+        OnStateChanged();
         return await Task.FromResult(clientSession);
     }
 
@@ -51,30 +54,36 @@ public sealed class ClientSessionService : IClientSessionService
         _sessions.TryAdd(clientSession.SessionId, clientSession);
         Console.WriteLine(
             $"Created TestStaticClientSession with sessionId: {clientSession.SessionId}");
+        OnStateChanged();
         return await Task.FromResult(clientSession);
     }
 
     public Task RemoveClientSession(Guid clientSessionId)
     {
         throw new NotImplementedException();
+        OnStateChanged();
     }
 
-    public Task<ClientSession> GetClientSession(Guid clientSessionId)
+    public async Task<ClientSession> GetClientSession(Guid clientSessionId)
     {
-        throw new NotImplementedException();
+        var found = _sessions.TryGetValue(clientSessionId, out var clientSession);
+        if (!found)
+            throw new ClientSessionNotFoundException(
+                $"ClientSession with id: {clientSessionId} is not found.");
+        return (await Task.FromResult(clientSession))!;
     }
 
-    public Task<IEnumerable<ClientSession>> GetClientSessions()
+    public async Task<IEnumerable<ClientSession>> GetClientSessions()
     {
-        throw new NotImplementedException();
+        return await Task.FromResult(_sessions.Values.ToList());
     }
 
     public async Task<IEnumerable<Command>> GetCommandQueueFromSession(Guid clientSessionId)
     {
-        _sessions.TryGetValue(clientSessionId, out ClientSession session);
+        _sessions.TryGetValue(clientSessionId, out ClientSession? session);
         if (session == null)
             throw new ClientSessionNotFoundException(
-                $"ClientSession with session id: {clientSessionId} is not found.");
+                $"ClientSession with id: {clientSessionId} is not found.");
         return await Task.FromResult(session.Client.CommandQueue);
     }
 
@@ -94,6 +103,7 @@ public sealed class ClientSessionService : IClientSessionService
         };
         session.Client.EnqueueCommand(command);
         await Task.FromResult(session.Client.CommandQueue);
+        OnStateChanged();
     }
 
     public async Task<Command> DequeueCommand(DequeueCommandRequest dequeueCommandRequest)
@@ -105,6 +115,7 @@ public sealed class ClientSessionService : IClientSessionService
                 nameof(dequeueCommandRequest.SessionId));
         session.Client.TryDequeueCommand(out var command);
         return await Task.FromResult(command);
+        OnStateChanged();
     }
 
     public async Task WriteCommandResult(CommandResultRequest commandResultRequest)
@@ -118,10 +129,17 @@ public sealed class ClientSessionService : IClientSessionService
             throw new CommandNotFoundException($"Command with id: {commandResultRequest.CommandId} is not found.");
         command.Result = commandResultRequest.Result;
         session.Client.WriteCommandResult(commandResultRequest);
+        OnStateChanged();
     }
 
     public Task ClearQueue(ClearCommandQueueRequest clearCommandQueueRequest)
     {
         throw new NotImplementedException();
+        OnStateChanged();
+    }
+
+    private void OnStateChanged()
+    {
+        StateChanged?.Invoke(this, EventArgs.Empty);
     }
 }

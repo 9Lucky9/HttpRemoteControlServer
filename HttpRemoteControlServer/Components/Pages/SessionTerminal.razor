@@ -1,0 +1,24 @@
+@page "/session/{sessionId}"
+@rendermode InteractiveServer
+
+@using HttpRemoteControlServer.Contracts
+@using HttpRemoteControlServer.Models
+@inject IClientSessionService ClientSessionService
+
+<p class="session-name">@ClientSession.Client.MachineInfo.PrettyName</p>
+
+@code {
+    
+    [Parameter]
+    public string? SessionId { get; set; }
+    
+    private ClientSession ClientSession { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var clientSession = 
+            await ClientSessionService.GetClientSession(Guid.Parse(SessionId));
+        ClientSession = clientSession;
+    }
+
+}

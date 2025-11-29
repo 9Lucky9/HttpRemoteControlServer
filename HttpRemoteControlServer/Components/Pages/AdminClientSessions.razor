@@ -1,0 +1,37 @@
+@page "/admin/client-sessions"
+    @rendermode InteractiveServer
+@using System.Text.Json
+@using HttpRemoteControlServer.Contracts
+@using HttpRemoteControlServer.Models
+
+@inject IClientSessionService ClientSessionService
+
+<PageTitle>ActiveSessionData</PageTitle>
+
+<h1>ActiveSessionData</h1>
+
+<div>
+    <pre>@CurrentJson</pre>
+</div>
+
+@code {
+    
+    private string CurrentJson { get; set; }
+    private List<ClientSession>? ClientSessions { get; set; }
+    
+    private async void HandleStateChange(object? sender, EventArgs e)
+    {
+        ClientSessions = (await ClientSessionService.GetClientSessions()).ToList();
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        var json = JsonSerializer.Serialize(ClientSessions, options);
+        CurrentJson = json;
+        await InvokeAsync(StateHasChanged);
+    }   
+
+    protected override async Task OnInitializedAsync()
+    {
+        var clientSessions = await ClientSessionService.GetClientSessions();
+        ClientSessions = clientSessions.ToList();
+        ClientSessionService.StateChanged += HandleStateChange;
+    }
+}

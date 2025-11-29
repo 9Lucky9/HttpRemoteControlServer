@@ -7,6 +7,8 @@ namespace HttpRemoteControlServer.Contracts;
 public interface IClientSessionService
 {
     # region ClientSession
+    public event EventHandler StateChanged;
+    
     Task<ClientSession> CreateClientSession(ClientRegistrationRequest clientRegistrationRequest);
     Task<ClientSession> CreateTestStaticClientSession();
     Task RemoveClientSession(Guid clientSessionId);

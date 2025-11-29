@@ -64,13 +64,14 @@ if (!app.Environment.IsDevelopment())
     });
 }
 
-app.MapControllers();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.UseMiddleware<EnableBufferingMiddleware>();
 app.UseMiddleware<DecryptorMiddleware>();
+
+app.MapControllers();
 
 app.UseAntiforgery();
 

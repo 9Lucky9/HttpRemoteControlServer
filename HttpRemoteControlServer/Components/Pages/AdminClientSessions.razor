@@ -1,5 +1,5 @@
 @page "/admin/client-sessions"
-    @rendermode InteractiveServer
+@rendermode InteractiveServer
 @using System.Text.Json
 @using HttpRemoteControlServer.Contracts
 @using HttpRemoteControlServer.Models
@@ -11,13 +11,34 @@
 <h1>ActiveSessionData</h1>
 
 <div>
-    <pre>@CurrentJson</pre>
+    <button 
+        type="button" 
+        class="btn btn-primary"
+        @onclick="ClearClientSession">Clear</button>
+    @if (string.IsNullOrEmpty(CurrentJson))
+    {
+        <h2>Currently no data. Data will updated in real time.</h2>
+    }
+    else
+    {
+        <pre>@CurrentJson</pre>
+    }
 </div>
 
 @code {
     
-    private string CurrentJson { get; set; }
+    private string? CurrentJson { get; set; }
     private List<ClientSession>? ClientSessions { get; set; }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var clientSessions = await ClientSessionService.GetClientSessions();
+        ClientSessions = clientSessions.ToList();
+        ClientSessionService.StateChanged += HandleStateChange;
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        var json = JsonSerializer.Serialize(ClientSessions, options);
+        CurrentJson = json;
+    }
     
     private async void HandleStateChange(object? sender, EventArgs e)
     {
@@ -26,12 +47,16 @@
         var json = JsonSerializer.Serialize(ClientSessions, options);
         CurrentJson = json;
         await InvokeAsync(StateHasChanged);
-    }   
+    }
 
-    protected override async Task OnInitializedAsync()
+    private async Task ClearClientSession()
     {
-        var clientSessions = await ClientSessionService.GetClientSessions();
-        ClientSessions = clientSessions.ToList();
-        ClientSessionService.StateChanged += HandleStateChange;
+        if(ClientSessions == null)
+            return;
+        foreach (var clientSession in ClientSessions)
+        {
+            await ClientSessionService.RemoveClientSession(clientSession.SessionId);
+        }
+        await InvokeAsync(StateHasChanged);
     }
 }

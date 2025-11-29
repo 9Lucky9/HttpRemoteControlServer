@@ -58,9 +58,12 @@ public sealed class ClientSessionService : IClientSessionService
         return await Task.FromResult(clientSession);
     }
 
-    public Task RemoveClientSession(Guid clientSessionId)
+    public async Task RemoveClientSession(Guid clientSessionId)
     {
-        throw new NotImplementedException();
+        _sessions.TryRemove(clientSessionId, out var clientSession);
+        if(clientSession == null)
+            throw new ClientSessionNotFoundException(
+                $"ClientSession with id: {clientSessionId} is not found.");
         OnStateChanged();
     }
 

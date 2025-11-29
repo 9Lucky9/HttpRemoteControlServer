@@ -28,7 +28,7 @@ public sealed class DecryptorMiddleware
         }
 
         var encrypted = bool.Parse(encryptedValues.ToString());
-        if (!encrypted)
+        if (!encrypted || context.Request.Path == "/client/register-me")
         {
             await _next.Invoke(context);
             return;

@@ -64,9 +64,9 @@ public sealed class ClientSessionService : IClientSessionService
         throw new NotImplementedException();
     }
 
-    public Task<IEnumerable<ClientSession>> GetClientSessions()
+    public async Task<IEnumerable<ClientSession>> GetClientSessions()
     {
-        throw new NotImplementedException();
+        return await Task.FromResult(_sessions.Values.ToList());
     }
 
     public async Task<IEnumerable<Command>> GetCommandQueueFromSession(Guid clientSessionId)

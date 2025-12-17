@@ -40,6 +40,25 @@ public sealed class AdminController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError); 
         }
     }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAllClientSessions()
+    {
+        try
+        {
+            _logger.LogInformation("Received request to retrieve all ClientSessions.");
+            var allClientSessions =
+                await _clientSessionService.GetClientSessions();
+            return Ok(allClientSessions);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(
+                "Unexpected error occurred during retrieval of commands. Ex: {ex}", 
+                e);
+            return StatusCode(StatusCodes.Status500InternalServerError); 
+        }
+    }
     
     [HttpGet]
     public async Task<IActionResult> GetCommands(Guid sessionId)
@@ -47,7 +66,8 @@ public sealed class AdminController : ControllerBase
         try
         {
             _logger.LogInformation("Received request to retrieve all commands from session.");
-            var commands = await _clientSessionService.GetCommandQueueFromSession(sessionId);
+            var commands = 
+                await _clientSessionService.GetCommandQueueFromSession(sessionId);
             return Ok(commands);
         }
         catch (ClientSessionNotFoundException)

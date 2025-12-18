@@ -27,62 +27,63 @@ public sealed class EncryptedMonoEndpointService
     /// <summary>
     /// Processes request and returns encrypted response.
     /// </summary>
-    public async Task<string> ProcessRequest(MonoEndpointDataRequest request)
+    public async Task<MonoEndpointDataResponse> ProcessRequest(MonoEndpointDataRequest request)
     {
-        if (string.IsNullOrEmpty(request.Method))
-            throw new MonoEndpointException("Method canno't be null or empty.");
-        if (string.IsNullOrEmpty(request.Payload))
-            throw new MonoEndpointException("Payload canno't be null or empty.");
-        switch (request.Method)
-        {
-            case "RegisterMe":
-            {
-                var response = 
-                    await ProcessAsync<ClientRegistrationRequest, ClientRegistrationResponse>(
-                        request, 
-                        _clientService.RegisterClient);
-                var json = JsonSerializer.Serialize(response);
-                var encryptedJson = _encryptor.Encrypt(
-                    _options.Value.Key,
-                    json);
-                return encryptedJson;
-            }
-
-
-            case "DequeueCommand":
-            {
-                var response = 
-                    await ProcessAsync<DequeueCommandRequest, DequeuedCommandResponse>(
-                        request, 
-                        _clientService.DequeueCommand);
-                
-                var json = JsonSerializer.Serialize(response);
-                var encryptedJson = _encryptor.Encrypt(
-                    _options.Value.Key,
-                    json);
-                return encryptedJson;
-            }
-
-
-            case "PushCommandResult":
-            {
-                var commandResultRequest = 
-                    JsonSerializer.Deserialize<CommandResultRequest>(request.Payload);
-                await _clientService.WriteCommandResult(commandResultRequest);
-                var monoResponse = new MonoEndpointDataResponse()
-                {
-                    Method = request.Method,
-                    Payload = ""
-                };
-                var json = JsonSerializer.Serialize(monoResponse);
-                var encryptedJson = _encryptor.Encrypt(
-                    _options.Value.Key,
-                    json);
-                return encryptedJson;
-            }
-            default:
-                throw new MonoEndpointException($"Method {request.Method} for processing not found.");
-        }
+        return new MonoEndpointDataResponse();
+        //if (string.IsNullOrEmpty(request.Path))
+        //    throw new MonoEndpointException("Method canno't be null or empty.");
+        //if (string.IsNullOrEmpty(request.Payload))
+        //    throw new MonoEndpointException("Payload canno't be null or empty.");
+        //switch (request.Method)
+        //{
+        //    case "RegisterMe":
+        //    {
+        //        var response = 
+        //            await ProcessAsync<ClientRegistrationRequest, ClientRegistrationResponse>(
+        //                request, 
+        //                _clientService.RegisterClient);
+        //        var json = JsonSerializer.Serialize(response);
+        //        var encryptedJson = _encryptor.Encrypt(
+        //            _options.Value.Key,
+        //            json);
+        //        return encryptedJson;
+        //    }
+//
+//
+        //    case "DequeueCommand":
+        //    {
+        //        var response = 
+        //            await ProcessAsync<DequeueCommandRequest, DequeuedCommandResponse>(
+        //                request, 
+        //                _clientService.DequeueCommand);
+        //        
+        //        var json = JsonSerializer.Serialize(response);
+        //        var encryptedJson = _encryptor.Encrypt(
+        //            _options.Value.Key,
+        //            json);
+        //        return encryptedJson;
+        //    }
+//
+//
+        //    case "PushCommandResult":
+        //    {
+        //        var commandResultRequest = 
+        //            JsonSerializer.Deserialize<CommandResultRequest>(request.Payload);
+        //        await _clientService.WriteCommandResult(commandResultRequest);
+        //        var monoResponse = new MonoEndpointDataResponse()
+        //        {
+        //            Method = request.Method,
+        //            Payload = ""
+        //        };
+        //        var json = JsonSerializer.Serialize(monoResponse);
+        //        var encryptedJson = _encryptor.Encrypt(
+        //            _options.Value.Key,
+        //            json);
+        //        return encryptedJson;
+        //    }
+        //    default:
+        //        throw new MonoEndpointException($"Method {request.Method} for processing not found.");
+        //}
     }
 
     private static async Task<MonoEndpointDataResponse> ProcessAsync<TRequest, TResponse>(
@@ -99,7 +100,7 @@ public sealed class EncryptedMonoEndpointService
         
         return new MonoEndpointDataResponse()
         {
-            Method = monoEndpointDataRequest.Method,
+            Method = monoEndpointDataRequest.Path,
             Payload = json,
         };
     }

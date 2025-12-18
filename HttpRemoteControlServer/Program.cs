@@ -12,8 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<AuthOptions>(
     builder.Configuration.GetSection(nameof(AuthOptions)));
 
-builder.Services.Configure<EncryptOptions>(
-    builder.Configuration.GetSection(nameof(EncryptOptions)));
+builder.Services.Configure<MonoEndpointOptions>(
+    builder.Configuration.GetSection(nameof(MonoEndpointOptions)));
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IClientSessionService, ClientSessionService>();
@@ -70,7 +70,8 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.UseMiddleware<EnableBufferingMiddleware>();
-app.UseMiddleware<DecryptorMiddleware>();
+app.UseMiddleware<EncryptionMiddleware>();
+app.UseMiddleware<MonoEndpointMiddleware>();
 app.MapControllers();
 
 app.Run();

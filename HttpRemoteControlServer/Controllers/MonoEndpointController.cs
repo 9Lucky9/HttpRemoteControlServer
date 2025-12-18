@@ -11,9 +11,9 @@ namespace HttpRemoteControlServer.Controllers;
 public sealed class MonoEndpointController : ControllerBase
 {
     private readonly ILogger<AdminController> _logger;
-    private readonly MonoEndpointService _service;
+    private readonly EncryptedMonoEndpointService _service;
 
-    public MonoEndpointController(ILogger<AdminController> logger, MonoEndpointService service)
+    public MonoEndpointController(ILogger<AdminController> logger, EncryptedMonoEndpointService service)
     {
         _logger = logger;
         _service = service;
@@ -26,14 +26,14 @@ public sealed class MonoEndpointController : ControllerBase
         {
             _logger.LogInformation("Received MonoEndpointDataRequest. json: {json}",
                 JsonSerializer.Serialize(request));
-            var response = await _service.Process(request);
+            var response = await _service.ProcessRequest(request);
             return Ok(response);
         }
         catch (MonoEndpointException e)
         {
             _logger.LogError(
-                "Error occurred during executing mono endpoint. Cause: {exMessage}", 
-                e.Message);
+                "Error occurred during executing mono endpoint. Ex: {ex}", 
+                e);
             return BadRequest(e.Message);
 
         }

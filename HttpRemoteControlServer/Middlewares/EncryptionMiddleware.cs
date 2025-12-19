@@ -5,18 +5,18 @@ using Microsoft.Extensions.Options;
 
 namespace HttpRemoteControlServer.Middlewares;
 
-public sealed class DecryptorMiddleware
+public sealed class EncryptionMiddleware
 {
     private readonly RequestDelegate _next;
 
-    public DecryptorMiddleware(RequestDelegate next)
+    public EncryptionMiddleware(RequestDelegate next)
     {
         _next = next;
     }
     
     public async Task InvokeAsync(
         HttpContext context, 
-        IOptionsSnapshot<EncryptOptions> encryptOptions, 
+        IOptionsSnapshot<MonoEndpointOptions> monoOptions, 
         IEncryptor encryptor)
     {
         var containsEncryption = 
@@ -34,12 +34,26 @@ public sealed class DecryptorMiddleware
             return;
         }
 
+        //Decrypt
         context.Request.Body.Position = 0;
-        var rawRequestBody = await new StreamReader(context.Request.Body).ReadToEndAsync();
+        var rawRequestBody = 
+            await new StreamReader(context.Request.Body).ReadToEndAsync();
         var decryptedPayload = encryptor.Decrypt(
-            encryptOptions.Value.Key,
+            monoOptions.Value.Key,
             rawRequestBody);
-        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(decryptedPayload));
+        context.Request.Body = 
+            new MemoryStream(Encoding.UTF8.GetBytes(decryptedPayload));
+        
         await _next.Invoke(context);
+        
+        //Encrypt
+        context.Request.Body.Position = 0;
+        var rawResponseBody = 
+            await new StreamReader(context.Request.Body).ReadToEndAsync();
+        var encryptedResponse = encryptor.Encrypt(
+            monoOptions.Value.Key,
+            rawResponseBody);
+        context.Response.Body = 
+            new MemoryStream(Encoding.UTF8.GetBytes(encryptedResponse));
     }
 }

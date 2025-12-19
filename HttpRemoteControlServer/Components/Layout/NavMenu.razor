@@ -1,4 +1,6 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@inject IJSRuntime JSRuntime;
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">HttpRemoteControlServer</a>
     </div>
@@ -13,17 +15,35 @@
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
         </div>
-        
+
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="sessions">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Sessions
+            <NavLink class="nav-link" href="counter">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="weather">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="weather">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> ApiAdmin
             </NavLink>
         </div>
         
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="admin/client-sessions">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> AdminClientSessions
-            </NavLink>
-        </div>
     </nav>
+    <div class="nav-item px-3">
+        <button type="button" class="btn" @onclick="OpenSwagger"></button>
+    </div>
 </div>
+
+@code {
+
+    private async Task OpenSwagger()
+    {
+        await JSRuntime.InvokeAsync<string>("open", "http://localost:5087/swagger", "_blank");
+    }
+}

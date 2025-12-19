@@ -5,7 +5,6 @@ using HttpRemoteControlServer.Contracts;
 using HttpRemoteControlServer.Middlewares;
 using HttpRemoteControlServer.Options;
 using HttpRemoteControlServer.Services;
-using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,30 +12,30 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<AuthOptions>(
     builder.Configuration.GetSection(nameof(AuthOptions)));
 
-builder.Services.Configure<EncryptOptions>(
-    builder.Configuration.GetSection(nameof(EncryptOptions)));
+builder.Services.Configure<MonoEndpointOptions>(
+    builder.Configuration.GetSection(nameof(MonoEndpointOptions)));
 
-//builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IClientSessionService, ClientSessionService>();
 builder.Services.AddTransient<IClientService, ClientService>();
 builder.Services.AddTransient<IEncryptor, AesEncryptor>();
 
+builder.Services.AddRouting(options =>
+{
+    options.ConstraintMap["hyphen"] = typeof(HyphenRouteParameterTransformer);
+});
 builder.Services.AddHttpsRedirection(options =>
 {
     options.RedirectStatusCode = 307;
     options.HttpsPort = 8081;
 });
 
-builder.Services.AddOpenApi();
-
-builder.Services.AddControllers(opts =>
-{
-    opts.Conventions.Add(new RouteTokenTransformerConvention(
-        new HyphenRouteParameterTransformer()));
-});
-
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddControllers();
+
+builder.Services.AddOpenApi();
 
 builder.Services.AddBlazorBootstrap();
 
@@ -64,15 +63,15 @@ if (!app.Environment.IsDevelopment())
     });
 }
 
+app.UseAntiforgery();
+
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.UseMiddleware<EnableBufferingMiddleware>();
-app.UseMiddleware<DecryptorMiddleware>();
-
+app.UseMiddleware<EncryptionMiddleware>();
+app.UseMiddleware<MonoEndpointMiddleware>();
 app.MapControllers();
-
-app.UseAntiforgery();
 
 app.Run();

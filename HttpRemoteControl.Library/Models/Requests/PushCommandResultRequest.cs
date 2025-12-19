@@ -1,6 +1,6 @@
 namespace HttpRemoteControl.Library.Models.Requests;
 
-public sealed class CommandResultRequest
+public sealed class PushCommandResultRequest
 {
     public Guid CommandId { get; set; }
     public Guid ClientId { get; set; }

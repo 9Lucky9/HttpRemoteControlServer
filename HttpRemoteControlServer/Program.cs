@@ -9,13 +9,20 @@ using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
+#region Options
+
 builder.Services.Configure<AuthOptions>(
     builder.Configuration.GetSection(nameof(AuthOptions)));
 
 builder.Services.Configure<MonoEndpointOptions>(
     builder.Configuration.GetSection(nameof(MonoEndpointOptions)));
 
+#endregion
+
+
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<EncryptedMonoEndpointService>();
+
 builder.Services.AddSingleton<IClientSessionService, ClientSessionService>();
 builder.Services.AddTransient<IClientService, ClientService>();
 builder.Services.AddTransient<IEncryptor, AesEncryptor>();
@@ -55,7 +62,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 
     app.UseHttpsRedirection();
-    app.UseMiddleware<AuthTokenMiddleware>();
+    //app.UseMiddleware<AuthTokenMiddleware>();
     app.MapGet("/", async x =>
     {
         x.Response.Redirect("https://grafana.com", true);
@@ -69,9 +76,10 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.UseMiddleware<EnableBufferingMiddleware>();
-app.UseMiddleware<EncryptionMiddleware>();
-app.UseMiddleware<MonoEndpointMiddleware>();
+//Nah not working, currently disabled
+//app.UseMiddleware<EnableBufferingMiddleware>();
+//app.UseMiddleware<EncryptionMiddleware>();
+//app.UseMiddleware<MonoEndpointMiddleware>();
 app.MapControllers();
 
 app.Run();

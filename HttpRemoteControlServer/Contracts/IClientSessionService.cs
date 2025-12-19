@@ -20,7 +20,7 @@ public interface IClientSessionService
     # region CommandQueue
     public Task EnqueueCommand(CommandEnqueueRequest commandEnqueueRequest);
     public Task<Command> DequeueCommand(DequeueCommandRequest dequeueCommandRequest);
-    public Task WriteCommandResult(CommandResultRequest commandResultRequest);
+    public Task WriteCommandResult(PushCommandResultRequest pushCommandResultRequest);
     public Task ClearQueue(ClearCommandQueueRequest clearCommandQueueRequest);
     # endregion
 }

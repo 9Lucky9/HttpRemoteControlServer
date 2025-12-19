@@ -37,12 +37,12 @@ public sealed class Client
         return true;
     }
 
-    public void WriteCommandResult(CommandResultRequest commandResultRequest)
+    public void WriteCommandResult(PushCommandResultRequest pushCommandResultRequest)
     {
-        if (!_dequeuedCommands.TryGetValue(commandResultRequest.CommandId, out Command? command))
+        if (!_dequeuedCommands.TryGetValue(pushCommandResultRequest.CommandId, out Command? command))
             throw new CommandNotFoundException(
-                $"Writing result to command is failed, command with id: {commandResultRequest.CommandId} is not found");
-        command.Result = commandResultRequest.Result;
+                $"Writing result to command is failed, command with id: {pushCommandResultRequest.CommandId} is not found");
+        command.Result = pushCommandResultRequest.Result;
     }
 
     public bool TryGetDequeuedCommand(Guid commandId, [MaybeNullWhen(false)] out Command? command)

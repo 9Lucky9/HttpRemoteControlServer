@@ -121,17 +121,17 @@ public sealed class ClientSessionService : IClientSessionService
         OnStateChanged();
     }
 
-    public async Task WriteCommandResult(CommandResultRequest commandResultRequest)
+    public async Task WriteCommandResult(PushCommandResultRequest pushCommandResultRequest)
     {
-        _sessions.TryGetValue(commandResultRequest.SessionId, out ClientSession session);
+        _sessions.TryGetValue(pushCommandResultRequest.SessionId, out ClientSession session);
         if (session == null)
             throw new ClientSessionNotFoundException(
-                $"ClientSession with id: {commandResultRequest.SessionId} is not found.");
-        session.Client.TryGetDequeuedCommand(commandResultRequest.CommandId, out var command);
+                $"ClientSession with id: {pushCommandResultRequest.SessionId} is not found.");
+        session.Client.TryGetDequeuedCommand(pushCommandResultRequest.CommandId, out var command);
         if (command == null)
-            throw new CommandNotFoundException($"Command with id: {commandResultRequest.CommandId} is not found.");
-        command.Result = commandResultRequest.Result;
-        session.Client.WriteCommandResult(commandResultRequest);
+            throw new CommandNotFoundException($"Command with id: {pushCommandResultRequest.CommandId} is not found.");
+        command.Result = pushCommandResultRequest.Result;
+        session.Client.WriteCommandResult(pushCommandResultRequest);
         OnStateChanged();
     }
 

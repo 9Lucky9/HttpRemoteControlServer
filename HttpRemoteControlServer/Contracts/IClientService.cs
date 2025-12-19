@@ -7,5 +7,5 @@ public interface IClientService
 {
     Task<ClientRegistrationResponse> RegisterClient(ClientRegistrationRequest clientRegistrationRequest);
     Task<DequeuedCommandResponse> DequeueCommand(DequeueCommandRequest dequeueCommandRequest);
-    Task WriteCommandResult(CommandResultRequest commandResultRequest);
+    Task WriteCommandResult(PushCommandResultRequest pushCommandResultRequest);
 }

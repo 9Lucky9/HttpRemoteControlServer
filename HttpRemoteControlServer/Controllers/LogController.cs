@@ -24,7 +24,8 @@ public sealed class LogController : ControllerBase
         try
         {
             _logger.LogInformation("Received request to post log.");
-            await _clientSessionService.WriteLogToClient(logDto);
+            throw new NotImplementedException();
+            //await _clientSessionService.WriteLogToClient(logDto);
             return NoContent();
         }
         catch (ClientSessionNotFoundException)
@@ -49,9 +50,10 @@ public sealed class LogController : ControllerBase
         {
             _logger.LogInformation("Received request to post log.");
             var guid = Guid.Parse(sessionId);
-            var logs =
-                await _clientSessionService.GetLogsFromClientSession(guid);
-            return Ok(logs);
+            //var logs =
+            //    await _clientSessionService.GetLogsFromClientSession(guid);
+            return Ok();
+            // Ok(logs);
         }
         catch (ClientSessionNotFoundException)
         {

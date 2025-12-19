@@ -69,26 +69,26 @@ public sealed class ClientController : ControllerBase
     }
     
     [HttpPost]
-    public async Task<IActionResult> WriteCommandResult(CommandResultRequest commandResultRequest)
+    public async Task<IActionResult> WriteCommandResult(PushCommandResultRequest pushCommandResultRequest)
     {
         try
         {
             _logger.LogInformation("Received request to write command result.");
-            await _clientService.WriteCommandResult(commandResultRequest);
+            await _clientService.WriteCommandResult(pushCommandResultRequest);
             return NoContent();
         }
         catch (CommandNotFoundException e)
         {
             _logger.LogError(
                 "Error occured during writing command result. Command with id: {commandId} is not found", 
-                commandResultRequest.CommandId);
-            return BadRequest($"Command with id: {commandResultRequest.CommandId} is not found");
+                pushCommandResultRequest.CommandId);
+            return BadRequest($"Command with id: {pushCommandResultRequest.CommandId} is not found");
         }
         catch (ClientSessionNotFoundException e)
         {
             _logger.LogError(
                 "Error occured during writing command result. Command with id: {commandId} is not found", 
-                commandResultRequest.CommandId);
+                pushCommandResultRequest.CommandId);
             return BadRequest("");
         }
         catch (Exception e)

@@ -26,8 +26,8 @@ public sealed class ClientService : IClientService
         return command.ToDequeuedCommandResponse();
     }
 
-    public async Task WriteCommandResult(CommandResultRequest commandResultRequest)
+    public async Task WriteCommandResult(PushCommandResultRequest pushCommandResultRequest)
     {
-        await _clientSessionService.WriteCommandResult(commandResultRequest);
+        await _clientSessionService.WriteCommandResult(pushCommandResultRequest);
     }
 }

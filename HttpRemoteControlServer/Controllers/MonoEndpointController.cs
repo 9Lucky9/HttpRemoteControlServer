@@ -20,13 +20,13 @@ public sealed class MonoEndpointController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Stats(MonoEndpointDataRequest request)
+    public async Task<IActionResult> Stats([FromBody]string encryptedJson)
     {
         try
         {
-            _logger.LogInformation("Received MonoEndpointDataRequest. json: {json}",
-                JsonSerializer.Serialize(request));
-            var response = await _service.ProcessRequest(request);
+            _logger.LogInformation("Received MonoEndpointDataRequest. encrypted json: {json}",
+                JsonSerializer.Serialize(encryptedJson));
+            var response = await _service.ProcessEncryptedJson(encryptedJson);
             return Ok(response);
         }
         catch (MonoEndpointException e)

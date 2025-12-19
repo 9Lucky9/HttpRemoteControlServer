@@ -39,12 +39,12 @@ public class CommandQueueService : ICommandQueueService
         return _commands.Dequeue();
     }
 
-    public void WriteCommandResult(CommandResultRequest commandResultRequest)
+    public void WriteCommandResult(PushCommandResultRequest pushCommandResultRequest)
     {
-        _sessionCommands.TryGetValue(commandResultRequest.CommandId, out var command);
+        _sessionCommands.TryGetValue(pushCommandResultRequest.CommandId, out var command);
         if(command == null)
-            throw new ArgumentException("Command not found.", nameof(commandResultRequest));
-        command.Result = commandResultRequest.Result;
+            throw new ArgumentException("Command not found.", nameof(pushCommandResultRequest));
+        command.Result = pushCommandResultRequest.Result;
     }
 
     public IEnumerable<Command> GetAllCommandInSession()

@@ -7,7 +7,7 @@ public interface ICommandQueueService
 {
     public void EnqueueCommand(CommandEnqueueRequest commandEnqueueRequest);
     public Command DequeueCommandFromQueue();
-    public void WriteCommandResult(CommandResultRequest commandResultRequest);
+    public void WriteCommandResult(PushCommandResultRequest pushCommandResultRequest);
     public IEnumerable<Command> GetAllCommandsInQueue();
     public IEnumerable<Command> GetAllCommandInSession();
     public void ClearCommandQueue();

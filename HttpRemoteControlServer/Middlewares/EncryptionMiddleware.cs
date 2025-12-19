@@ -28,7 +28,7 @@ public sealed class EncryptionMiddleware
         }
 
         var encrypted = bool.Parse(encryptedValues.ToString());
-        if (!encrypted || context.Request.Path == "/client/register-me")
+        if (!encrypted)
         {
             await _next.Invoke(context);
             return;
@@ -47,13 +47,12 @@ public sealed class EncryptionMiddleware
         await _next.Invoke(context);
         
         //Encrypt
-        context.Request.Body.Position = 0;
         var rawResponseBody = 
-            await new StreamReader(context.Request.Body).ReadToEndAsync();
+            await new StreamReader(context.Response.Body).ReadToEndAsync();
         var encryptedResponse = encryptor.Encrypt(
             monoOptions.Value.Key,
             rawResponseBody);
-        context.Response.Body = 
-            new MemoryStream(Encoding.UTF8.GetBytes(encryptedResponse));
+        await context.Response.Body.WriteAsync(
+            Encoding.UTF8.GetBytes(encryptedResponse));
     }
 }

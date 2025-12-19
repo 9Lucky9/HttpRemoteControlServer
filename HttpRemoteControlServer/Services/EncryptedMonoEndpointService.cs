@@ -12,96 +12,92 @@ namespace HttpRemoteControlServer.Services;
 public sealed class EncryptedMonoEndpointService
 {
     private readonly ILogger<EncryptedMonoEndpointService> _logger;
-    private readonly IClientService _clientService;
     private readonly IOptionsSnapshot<MonoEndpointOptions> _options;
     private readonly IEncryptor _encryptor;
+    private readonly IClientService _clientService;
 
-    public EncryptedMonoEndpointService(ILogger<EncryptedMonoEndpointService> logger, IClientService clientService, IOptionsSnapshot<MonoEndpointOptions> options, IEncryptor encryptor)
+    public EncryptedMonoEndpointService(ILogger<EncryptedMonoEndpointService> logger, IOptionsSnapshot<MonoEndpointOptions> options, IEncryptor encryptor, IClientService clientService)
     {
         _logger = logger;
-        _clientService = clientService;
         _options = options;
         _encryptor = encryptor;
+        _clientService = clientService;
     }
 
-    /// <summary>
-    /// Processes request and returns encrypted response.
-    /// </summary>
-    public async Task<MonoEndpointDataResponse> ProcessRequest(MonoEndpointDataRequest request)
+    public async Task<string> ProcessEncryptedJson(string encryptedJson)
     {
-        return new MonoEndpointDataResponse();
-        //if (string.IsNullOrEmpty(request.Path))
-        //    throw new MonoEndpointException("Method canno't be null or empty.");
-        //if (string.IsNullOrEmpty(request.Payload))
-        //    throw new MonoEndpointException("Payload canno't be null or empty.");
-        //switch (request.Method)
-        //{
-        //    case "RegisterMe":
-        //    {
-        //        var response = 
-        //            await ProcessAsync<ClientRegistrationRequest, ClientRegistrationResponse>(
-        //                request, 
-        //                _clientService.RegisterClient);
-        //        var json = JsonSerializer.Serialize(response);
-        //        var encryptedJson = _encryptor.Encrypt(
-        //            _options.Value.Key,
-        //            json);
-        //        return encryptedJson;
-        //    }
-//
-//
-        //    case "DequeueCommand":
-        //    {
-        //        var response = 
-        //            await ProcessAsync<DequeueCommandRequest, DequeuedCommandResponse>(
-        //                request, 
-        //                _clientService.DequeueCommand);
-        //        
-        //        var json = JsonSerializer.Serialize(response);
-        //        var encryptedJson = _encryptor.Encrypt(
-        //            _options.Value.Key,
-        //            json);
-        //        return encryptedJson;
-        //    }
-//
-//
-        //    case "PushCommandResult":
-        //    {
-        //        var commandResultRequest = 
-        //            JsonSerializer.Deserialize<CommandResultRequest>(request.Payload);
-        //        await _clientService.WriteCommandResult(commandResultRequest);
-        //        var monoResponse = new MonoEndpointDataResponse()
-        //        {
-        //            Method = request.Method,
-        //            Payload = ""
-        //        };
-        //        var json = JsonSerializer.Serialize(monoResponse);
-        //        var encryptedJson = _encryptor.Encrypt(
-        //            _options.Value.Key,
-        //            json);
-        //        return encryptedJson;
-        //    }
-        //    default:
-        //        throw new MonoEndpointException($"Method {request.Method} for processing not found.");
-        //}
-    }
+        if(string.IsNullOrEmpty(encryptedJson))
+            throw new MonoEndpointException("Received encryptedJson json is null or empty");
 
-    private static async Task<MonoEndpointDataResponse> ProcessAsync<TRequest, TResponse>(
-        MonoEndpointDataRequest monoEndpointDataRequest,
-        Func<TRequest, Task<TResponse>> processor)
-    {
+        //Decrypt json
+        var decryptedJson = 
+            _encryptor.Decrypt(_options.Value.Key, encryptedJson);
         
-        var request = 
-            JsonSerializer.Deserialize<TRequest>(monoEndpointDataRequest.Payload);
-        var processorResponse = await processor(request);
+        //Deserialize decrypted json
+        var monoRequest = 
+            JsonSerializer.Deserialize<MonoEndpointDataRequest>(decryptedJson);
         
-        var json = 
-            JsonSerializer.Serialize(processorResponse);
+        if(string.IsNullOrEmpty(monoRequest.Path))
+            throw new MonoEndpointException("MonoRequest.Path cannot be null or empty");
         
-        return new MonoEndpointDataResponse()
+        if(string.IsNullOrEmpty(monoRequest.Payload))
+            throw new MonoEndpointException("MonoRequest.Payload cannot be null or empty");
+        
+        //Map to clientService method & execute
+        var monoResponse = monoRequest.Path switch
         {
-            Method = monoEndpointDataRequest.Path,
-            Payload = json,
+            "/client/register-me" =>
+                await Process<ClientRegistrationRequest, ClientRegistrationResponse>(
+                    monoRequest,
+                    _clientService.RegisterClient),
+            
+            "/client/dequeue-command" =>
+                await Process<DequeueCommandRequest, DequeuedCommandResponse>(
+                    monoRequest,
+                    _clientService.DequeueCommand),
+            
+            "/client/write-command-result" =>
+                await Process<PushCommandResultRequest>(
+                    monoRequest,
+                    _clientService.WriteCommandResult),
+            _ => throw new MonoEndpointException(
+                $"monoRequest.Path was not recognized: {monoRequest.Path}")
         };
+        
+        var responseJson = JsonSerializer.Serialize(monoResponse);
+        var encryptedResponse = 
+            _encryptor.Encrypt(_options.Value.Key, responseJson);
+        return encryptedResponse;
+    }
+    
+    private static async Task<MonoEndpointDataResponse> Process<TReq, TRes>(
+        MonoEndpointDataRequest monoRequest,
+        Func<TReq, Task<TRes>> handler)
+    {
+        var request = 
+            JsonSerializer.Deserialize<TReq>(monoRequest.Payload);
+        var response = await handler(request);
+        var responseJson = JsonSerializer.Serialize(response);
+        var monoEndpointDataResponse = new MonoEndpointDataResponse()
+        {
+            Path = monoRequest.Path,
+            Payload = responseJson
+        };
+        return monoEndpointDataResponse;
+    }
+
+    private static async Task<MonoEndpointDataResponse> Process<TReq>(
+        MonoEndpointDataRequest monoRequest,
+        Func<TReq, Task> handler)
+    {
+        var request = 
+            JsonSerializer.Deserialize<TReq>(monoRequest.Payload);
+        await handler(request);
+        var monoEndpointDataResponse = new MonoEndpointDataResponse()
+        {
+            Path = monoRequest.Path,
+            Payload = ""
+        };
+        return monoEndpointDataResponse;
     }
 }

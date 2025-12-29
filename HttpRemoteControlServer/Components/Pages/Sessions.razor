@@ -4,8 +4,10 @@
 @using HttpRemoteControlServer.Contracts
 @using HttpRemoteControlServer.Models
 
+@inject ILogger<Sessions> Logger;
 @inject IClientSessionService ClientSessionService
 @inject NavigationManager NavManager
+
 
 <PageTitle>ActiveSessions</PageTitle>
 
@@ -13,6 +15,12 @@
 
 <div class="view">
     @{
+        if (ClientSessions == null)
+        {
+            <div>
+                <h2>No sessions open right now. Waiting for session to open...</h2>
+            </div>
+        }
         if (ClientSessions != null)
         {
             foreach (var clientSession in ClientSessions)
@@ -42,11 +50,30 @@
     private List<ClientSession>? ClientSessions { get; set; }
 
     
-    protected override async Task OnInitializedAsync()
+    protected async override Task OnInitializedAsync()
     {
-        var clientSessions = await ClientSessionService.GetClientSessions();
+        var clientSessions = 
+            await ClientSessionService.GetClientSessions();
         ClientSessions = clientSessions.ToList();
+        ClientSessionService.StateChanged += ClientSessionServiceOnStateChanged;
     }
+
+    private async void ClientSessionServiceOnStateChanged(object? sender, EventArgs e)
+    {
+        try
+        {
+            var clientSessions = 
+                await ClientSessionService.GetClientSessions();
+            ClientSessions = clientSessions.ToList();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                "UI Layer. Sessions.razor has failed to async handle update from ClientSessionService. Ex: {ex}", ex);
+        }
+    }
+
 
     private void OpenSession(Guid sessionId)
     {

@@ -1,24 +1,134 @@
 @page "/session/{sessionId}"
 @rendermode InteractiveServer
 
+@using HttpRemoteControl.Library.Models
+@using HttpRemoteControl.Library.Models.Requests
 @using HttpRemoteControlServer.Contracts
 @using HttpRemoteControlServer.Models
 @inject IClientSessionService ClientSessionService
+@inject IJSRuntime JS
 
-<p class="session-name">@ClientSession.Client.MachineInfo.PrettyName</p>
+<div class="container mt-4">
+    <div class="card bg-dark text-light shadow-lg terminal-card">
+        @* Header using Bootstrap Card Header *@
+        <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+            <span class="font-weight-bold">
+                <i class="oi oi-terminal mr-2"></i>
+                @(ClientSession?.Client?.MachineInfo?.PrettyName ?? "Connecting...")
+            </span>
+            <span class="badge badge-success">Connected</span>
+        </div>
+
+        @* Terminal Output Area *@
+        <div class="card-body terminal-body" id="terminalOutput">
+            @foreach (var line in _terminalLines)
+            {
+                <div class="terminal-line">
+                    <span class="text-info font-weight-bold">
+                        @(ClientSession?.Client?.MachineInfo?.User)@{"@"}{}:~$
+                    </span>
+                    <span class="ml-2">@line</span>
+                </div>
+            }
+            @if (_isProcessing)
+            {
+                <div class="text-muted italic">Executing command...</div>
+            }
+        </div>
+
+        @* Input Area using Bootstrap Input Group *@
+        <div class="card-footer border-secondary p-0">
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text bg-transparent border-0 text-info font-weight-bold">></span>
+                </div>
+                <input type="text"
+                       class="form-control bg-transparent border-0 text-light terminal-input"
+                       placeholder="Enter command..."
+                       @bind="_currentCommand"
+                       @bind:event="oninput"
+                       @onkeydown="HandleKeyDown"
+                       autofocus />
+            </div>
+        </div>
+    </div>
+</div>
+
 
 @code {
-    
-    [Parameter]
-    public string? SessionId { get; set; }
-    
-    private ClientSession ClientSession { get; set; }
+    [Parameter] public string? SessionId { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    private ClientSession? ClientSession { get; set; }
+    private Client Client => ClientSession!.Client;
+    
+    private List<string> _terminalLines = new();
+    private string _currentCommand = "";
+    private bool _isProcessing = false;
+    
+    protected async override Task OnInitializedAsync()
     {
-        var clientSession = 
-            await ClientSessionService.GetClientSession(Guid.Parse(SessionId));
-        ClientSession = clientSession;
+        if (Guid.TryParse(SessionId, out var guid))
+        {
+            ClientSession = await ClientSessionService.GetClientSession(guid);
+        }
+
+        // Initial welcome message
+        _terminalLines.Add("Remote Session Established.");
+        _terminalLines.Add("Type 'help' for available commands.");
+
+        ClientSessionService.StateChanged += ClientSessionServiceOnStateChanged;;
     }
 
+    private void ClientSessionServiceOnStateChanged(object? sender, EventArgs e)
+    {
+        //У нас сначала вводится команда в инпут, она идёт в enqueue.
+        //StateChanged()
+        //Её подхватывает клиент dequeue
+        //StateChanged()
+        //Клиент при успешном выполнении WritePushCommandResult
+        //StateChanged()
+        //При каждом стейт changed нужно заново присваивать ClientSession
+        
+        //Как отрисовать?
+        //Либо ререндер, либо append.
+        //Посмотрим append.
+        throw new NotImplementedException();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_currentCommand))
+        {
+            await ExecuteCommand();
+        }
+    }
+
+    private async Task ExecuteCommand()
+    {
+        var cmd = _currentCommand;
+        _terminalLines.Add(cmd);
+        _currentCommand = "";
+        _isProcessing = true;
+        
+        //fileName is before first space
+        //find First space, get it index
+        var spaceIndex = cmd.IndexOf(" ", StringComparison.Ordinal);
+        var fileName = cmd[..spaceIndex];
+        var args = cmd.Substring(spaceIndex, cmd.Length - fileName.Length);
+        
+        var commandEnqueueRequest = new CommandEnqueueRequest
+        { 
+            SessionId = ClientSession.SessionId, 
+            ClientId = Client.Id, 
+            FileName = fileName, 
+            Args = args
+        };
+        
+        await ClientSessionService.EnqueueCommand(commandEnqueueRequest);
+        
+        _isProcessing = false;
+
+        // Auto-scroll to bottom after UI renders
+        await JS.InvokeVoidAsync("scrollToBottom", "terminalOutput");
+    }
 }

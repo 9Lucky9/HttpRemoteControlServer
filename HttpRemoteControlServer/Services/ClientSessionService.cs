@@ -2,28 +2,28 @@ using System.Collections.Concurrent;
 using HttpRemoteControl.Library.Models;
 using HttpRemoteControl.Library.Models.Requests;
 using HttpRemoteControlServer.Contracts;
+using HttpRemoteControlServer.Domain;
 using HttpRemoteControlServer.Exceptions;
-using HttpRemoteControlServer.Models;
 
 namespace HttpRemoteControlServer.Services;
 
 public sealed class ClientSessionService : IClientSessionService
 {
-    private ConcurrentDictionary<Guid, ClientSession> _sessions = 
-        new ConcurrentDictionary<Guid, ClientSession>();
+    private ConcurrentDictionary<Guid, RemoteClientSession> _sessions = 
+        new ConcurrentDictionary<Guid, RemoteClientSession>();
     
     public event EventHandler? StateChanged;
 
-    public async Task<ClientSession> CreateClientSession(ClientRegistrationRequest clientRegistrationRequest)
+    public async Task<RemoteClientSession> CreateClientSession(RemoteClientRegistrationRequest remoteClientRegistrationRequest)
     {
-        var client = new Client()
+        var client = new RemoteClient()
         {
-            MachineInfo = clientRegistrationRequest.MachineInfo,
+            MachineInfo = remoteClientRegistrationRequest.MachineInfo,
         };
-        var clientSession = new ClientSession()
+        var clientSession = new RemoteClientSession()
         {
             SessionId = Guid.NewGuid(),
-            Client = client,
+            RemoteClient = client,
             OpenedDate = DateTime.UtcNow
         };
         _sessions.TryAdd(clientSession.SessionId, clientSession);
@@ -31,9 +31,9 @@ public sealed class ClientSessionService : IClientSessionService
         return await Task.FromResult(clientSession);
     }
 
-    public async Task<ClientSession> CreateTestStaticClientSession()
+    public async Task<RemoteClientSession> CreateTestStaticClientSession()
     {
-        var client = new Client()
+        var client = new RemoteClient()
         {
             MachineInfo = new MachineInfo()
             {
@@ -45,10 +45,10 @@ public sealed class ClientSessionService : IClientSessionService
                 Shell = "/bin/bash"
             }
         };
-        var clientSession = new ClientSession()
+        var clientSession = new RemoteClientSession()
         {
             SessionId = new Guid("89801fbb-08e6-45be-9cae-855080c9393c"),
-            Client = client,
+            RemoteClient = client,
             OpenedDate = DateTime.UtcNow
         };
         _sessions.TryAdd(clientSession.SessionId, clientSession);
@@ -67,7 +67,7 @@ public sealed class ClientSessionService : IClientSessionService
         OnStateChanged();
     }
 
-    public async Task<ClientSession> GetClientSession(Guid clientSessionId)
+    public async Task<RemoteClientSession> GetClientSession(Guid clientSessionId)
     {
         var found = _sessions.TryGetValue(clientSessionId, out var clientSession);
         if (!found)
@@ -76,23 +76,23 @@ public sealed class ClientSessionService : IClientSessionService
         return (await Task.FromResult(clientSession))!;
     }
 
-    public async Task<IEnumerable<ClientSession>> GetClientSessions()
+    public async Task<IEnumerable<RemoteClientSession>> GetClientSessions()
     {
         return await Task.FromResult(_sessions.Values.ToList());
     }
 
     public async Task<IEnumerable<Command>> GetCommandQueueFromSession(Guid clientSessionId)
     {
-        _sessions.TryGetValue(clientSessionId, out ClientSession? session);
+        _sessions.TryGetValue(clientSessionId, out RemoteClientSession? session);
         if (session == null)
             throw new ClientSessionNotFoundException(
                 $"ClientSession with id: {clientSessionId} is not found.");
-        return await Task.FromResult(session.Client.CommandQueue);
+        return await Task.FromResult(session.RemoteClient.CommandQueue);
     }
 
     public async Task EnqueueCommand(CommandEnqueueRequest commandEnqueueRequest)
     {
-        _sessions.TryGetValue(commandEnqueueRequest.SessionId, out ClientSession session);
+        _sessions.TryGetValue(commandEnqueueRequest.SessionId, out RemoteClientSession session);
         if (session == null)
             throw new ArgumentException(
                 $"ClientSession with session id: {commandEnqueueRequest.SessionId} is not found.", 
@@ -104,34 +104,34 @@ public sealed class ClientSessionService : IClientSessionService
             Args = commandEnqueueRequest.Args,
             EnqueuedAt = DateTime.UtcNow,
         };
-        session.Client.EnqueueCommand(command);
-        await Task.FromResult(session.Client.CommandQueue);
+        session.RemoteClient.EnqueueCommand(command);
+        await Task.FromResult(session.RemoteClient.CommandQueue);
         OnStateChanged();
     }
 
     public async Task<Command> DequeueCommand(DequeueCommandRequest dequeueCommandRequest)
     {
-        _sessions.TryGetValue(dequeueCommandRequest.SessionId, out ClientSession session);
+        _sessions.TryGetValue(dequeueCommandRequest.SessionId, out RemoteClientSession session);
         if (session == null)
             throw new ArgumentException(
                 $"ClientSession with session id: {dequeueCommandRequest.SessionId} is not found.", 
                 nameof(dequeueCommandRequest.SessionId));
-        session.Client.TryDequeueCommand(out var command);
+        session.RemoteClient.TryDequeueCommand(out var command);
         return await Task.FromResult(command);
         OnStateChanged();
     }
 
     public async Task WriteCommandResult(PushCommandResultRequest pushCommandResultRequest)
     {
-        _sessions.TryGetValue(pushCommandResultRequest.SessionId, out ClientSession session);
+        _sessions.TryGetValue(pushCommandResultRequest.SessionId, out RemoteClientSession session);
         if (session == null)
             throw new ClientSessionNotFoundException(
                 $"ClientSession with id: {pushCommandResultRequest.SessionId} is not found.");
-        session.Client.TryGetDequeuedCommand(pushCommandResultRequest.CommandId, out var command);
+        session.RemoteClient.TryGetDequeuedCommand(pushCommandResultRequest.CommandId, out var command);
         if (command == null)
             throw new CommandNotFoundException($"Command with id: {pushCommandResultRequest.CommandId} is not found.");
         command.Result = pushCommandResultRequest.Result;
-        session.Client.WriteCommandResult(pushCommandResultRequest);
+        session.RemoteClient.WriteCommandResult(pushCommandResultRequest);
         OnStateChanged();
     }
 

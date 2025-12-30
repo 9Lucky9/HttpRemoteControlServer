@@ -2,7 +2,7 @@
 @rendermode InteractiveServer
 @using System.Text.Json
 @using HttpRemoteControlServer.Contracts
-@using HttpRemoteControlServer.Models
+@using HttpRemoteControlServer.Domain
 
 @inject IClientSessionService ClientSessionService
 
@@ -28,7 +28,7 @@
 @code {
     
     private string? CurrentJson { get; set; }
-    private List<ClientSession>? ClientSessions { get; set; }
+    private List<RemoteClientSession>? ClientSessions { get; set; }
     
     protected override async Task OnInitializedAsync()
     {

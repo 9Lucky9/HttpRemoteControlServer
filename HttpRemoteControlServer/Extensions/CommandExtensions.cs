@@ -3,13 +3,13 @@ using HttpRemoteControl.Library.Models.Responses;
 
 namespace HttpRemoteControlServer.Extensions;
 
-static public class CommandExtensions
+public static class CommandExtensions
 {
-    static public DequeuedCommandResponse ToDequeuedCommandResponse(this Command command)
+    public static  DequeuedCommandResponse ToDequeuedCommandResponse(this Command command)
     {
         return new DequeuedCommandResponse()
         {
-            Id = command.Id,
+            CommandId = command.Id,
             FileName = command.FileName,
             Args = command.Args
         };

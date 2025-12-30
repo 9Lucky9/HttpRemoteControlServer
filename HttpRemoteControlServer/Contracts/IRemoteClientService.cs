@@ -3,9 +3,9 @@ using HttpRemoteControl.Library.Models.Responses;
 
 namespace HttpRemoteControlServer.Contracts;
 
-public interface IClientService
+public interface IRemoteClientService
 {
-    Task<ClientRegistrationResponse> RegisterClient(ClientRegistrationRequest clientRegistrationRequest);
+    Task<ClientRegistrationResponse> RegisterClient(RemoteClientRegistrationRequest request);
     Task<DequeuedCommandResponse> DequeueCommand(DequeueCommandRequest dequeueCommandRequest);
-    Task WriteCommandResult(PushCommandResultRequest pushCommandResultRequest);
+    Task WriteCommandResult(PushCommandResultRequest request);
 }

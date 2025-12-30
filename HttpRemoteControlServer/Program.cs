@@ -20,11 +20,11 @@ builder.Services.Configure<MonoEndpointOptions>(
 #endregion
 
 
-builder.Services.AddHttpContextAccessor();
+//builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<EncryptedMonoEndpointService>();
 
 builder.Services.AddSingleton<IClientSessionService, ClientSessionService>();
-builder.Services.AddTransient<IClientService, ClientService>();
+builder.Services.AddTransient<IRemoteClientService, RemoteClientService>();
 builder.Services.AddTransient<IEncryptor, AesEncryptor>();
 
 builder.Services.AddRouting(options =>
@@ -40,9 +40,9 @@ builder.Services.AddHttpsRedirection(options =>
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddControllers();
-
 builder.Services.AddOpenApi();
+
+builder.Services.AddControllers();
 
 builder.Services.AddBlazorBootstrap();
 

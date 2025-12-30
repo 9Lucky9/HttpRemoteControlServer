@@ -1,6 +1,6 @@
 using HttpRemoteControl.Library.Models;
 using HttpRemoteControl.Library.Models.Requests;
-using HttpRemoteControlServer.Models;
+using HttpRemoteControlServer.Domain;
 
 namespace HttpRemoteControlServer.Contracts;
 
@@ -9,11 +9,11 @@ public interface IClientSessionService
     # region ClientSession
     public event EventHandler StateChanged;
     
-    Task<ClientSession> CreateClientSession(ClientRegistrationRequest clientRegistrationRequest);
-    Task<ClientSession> CreateTestStaticClientSession();
+    Task<RemoteClientSession> CreateClientSession(RemoteClientRegistrationRequest remoteClientRegistrationRequest);
+    Task<RemoteClientSession> CreateTestStaticClientSession();
     Task RemoveClientSession(Guid clientSessionId);
-    Task<ClientSession> GetClientSession(Guid clientSessionId);
-    Task<IEnumerable<ClientSession>> GetClientSessions();
+    Task<RemoteClientSession> GetClientSession(Guid clientSessionId);
+    Task<IEnumerable<RemoteClientSession>> GetClientSessions();
     Task<IEnumerable<Command>> GetCommandQueueFromSession(Guid clientSessionId);
     # endregion
     

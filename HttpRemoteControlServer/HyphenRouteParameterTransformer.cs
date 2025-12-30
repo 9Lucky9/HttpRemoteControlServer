@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace HttpRemoteControlServer;
 
-public sealed class HyphenRouteParameterTransformer : IOutboundParameterTransformer
+public sealed partial class HyphenRouteParameterTransformer : IOutboundParameterTransformer
 {
     public string? TransformOutbound(object? value)
     {
@@ -17,6 +17,9 @@ public sealed class HyphenRouteParameterTransformer : IOutboundParameterTransfor
             return null;
         }
         
-        return Regex.Replace(inputString, "([a-z])([A-Z])", "$1-$2").ToLower();
+        return MyRegex().Replace(inputString, "$1-$2").ToLower();
     }
+
+    [GeneratedRegex("([a-z])([A-Z])")]
+    private static partial Regex MyRegex();
 }

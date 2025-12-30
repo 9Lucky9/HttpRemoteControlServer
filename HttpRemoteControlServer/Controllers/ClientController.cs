@@ -11,24 +11,24 @@ namespace HttpRemoteControlServer.Controllers;
 public sealed class ClientController : ControllerBase
 {
     private readonly ILogger<ClientController> _logger;
-    private readonly IClientService _clientService;
+    private readonly IRemoteClientService _remoteClientService;
 
-    public ClientController(ILogger<ClientController> logger, IClientService clientService)
+    public ClientController(ILogger<ClientController> logger, IRemoteClientService remoteClientService)
     {
         _logger = logger;
-        _clientService = clientService;
+        _remoteClientService = remoteClientService;
     }
     
     [HttpPost]
-    public async Task<IActionResult> RegisterMe(ClientRegistrationRequest clientRegistrationRequest)
+    public async Task<IActionResult> RegisterMe(RemoteClientRegistrationRequest remoteClientRegistrationRequest)
     {
         try
         {
-            var receivedJson = JsonSerializer.Serialize(clientRegistrationRequest);
+            var receivedJson = JsonSerializer.Serialize(remoteClientRegistrationRequest);
             _logger.LogInformation(
                 "Received request to register new client. Json: {json}", receivedJson);
-            var clientGuid = await _clientService.RegisterClient(clientRegistrationRequest);
-            var clientJson = JsonSerializer.Serialize(clientRegistrationRequest);
+            var clientGuid = await _remoteClientService.RegisterClient(remoteClientRegistrationRequest);
+            var clientJson = JsonSerializer.Serialize(remoteClientRegistrationRequest);
             _logger.LogInformation(
                 "Successfully registered client: {clientJson}. With id: {id}", clientJson, clientGuid);
             return Ok(clientGuid);
@@ -49,7 +49,7 @@ public sealed class ClientController : ControllerBase
         try
         {
             _logger.LogInformation("Received request to dequeue command.");
-            var command = await _clientService.DequeueCommand(commandRequest);
+            var command = await _remoteClientService.DequeueCommand(commandRequest);
             return Ok(command);
         }
         catch (InvalidOperationException)
@@ -74,7 +74,7 @@ public sealed class ClientController : ControllerBase
         try
         {
             _logger.LogInformation("Received request to write command result.");
-            await _clientService.WriteCommandResult(pushCommandResultRequest);
+            await _remoteClientService.WriteCommandResult(pushCommandResultRequest);
             return NoContent();
         }
         catch (CommandNotFoundException e)

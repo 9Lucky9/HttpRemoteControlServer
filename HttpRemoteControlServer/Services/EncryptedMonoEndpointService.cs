@@ -14,14 +14,14 @@ public sealed class EncryptedMonoEndpointService
     private readonly ILogger<EncryptedMonoEndpointService> _logger;
     private readonly IOptionsSnapshot<MonoEndpointOptions> _options;
     private readonly IEncryptor _encryptor;
-    private readonly IClientService _clientService;
+    private readonly IRemoteClientService _remoteClientService;
 
-    public EncryptedMonoEndpointService(ILogger<EncryptedMonoEndpointService> logger, IOptionsSnapshot<MonoEndpointOptions> options, IEncryptor encryptor, IClientService clientService)
+    public EncryptedMonoEndpointService(ILogger<EncryptedMonoEndpointService> logger, IOptionsSnapshot<MonoEndpointOptions> options, IEncryptor encryptor, IRemoteClientService remoteClientService)
     {
         _logger = logger;
         _options = options;
         _encryptor = encryptor;
-        _clientService = clientService;
+        _remoteClientService = remoteClientService;
     }
 
     public async Task<string> ProcessEncryptedJson(string encryptedJson)
@@ -47,19 +47,19 @@ public sealed class EncryptedMonoEndpointService
         var monoResponse = monoRequest.Path switch
         {
             "/client/register-me" =>
-                await Process<ClientRegistrationRequest, ClientRegistrationResponse>(
+                await Process<RemoteClientRegistrationRequest, ClientRegistrationResponse>(
                     monoRequest,
-                    _clientService.RegisterClient),
+                    _remoteClientService.RegisterClient),
             
             "/client/dequeue-command" =>
                 await Process<DequeueCommandRequest, DequeuedCommandResponse>(
                     monoRequest,
-                    _clientService.DequeueCommand),
+                    _remoteClientService.DequeueCommand),
             
             "/client/write-command-result" =>
                 await Process<PushCommandResultRequest>(
                     monoRequest,
-                    _clientService.WriteCommandResult),
+                    _remoteClientService.WriteCommandResult),
             _ => throw new MonoEndpointException(
                 $"monoRequest.Path was not recognized: {monoRequest.Path}")
         };

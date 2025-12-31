@@ -4,7 +4,9 @@
 @using HttpRemoteControlServer.Contracts
 @using HttpRemoteControlServer.Domain
 
-@inject IClientSessionService ClientSessionService
+@inject ILogger<AdminClientSessions> Logger;
+@inject ISessionManager SessionManager
+@inject ISessionNotifier SessionNotifier
 
 <PageTitle>ActiveSessionData</PageTitle>
 
@@ -28,35 +30,47 @@
 @code {
     
     private string? CurrentJson { get; set; }
-    private List<RemoteClientSession>? ClientSessions { get; set; }
+    private List<RemoteClientSession>? RemoteSessions { get; set; }
     
     protected override async Task OnInitializedAsync()
     {
-        var clientSessions = await ClientSessionService.GetClientSessions();
-        ClientSessions = clientSessions.ToList();
-        ClientSessionService.StateChanged += HandleStateChange;
+        var clientSessions = await SessionManager.GetAll();
+        RemoteSessions = clientSessions.ToList();
         var options = new JsonSerializerOptions { WriteIndented = true };
-        var json = JsonSerializer.Serialize(ClientSessions, options);
+        var json = JsonSerializer.Serialize(RemoteSessions, options);
         CurrentJson = json;
+        
+        SessionNotifier.NewSessionOpened += SessionNotifierOnNewSessionOpened;;
     }
-    
-    private async void HandleStateChange(object? sender, EventArgs e)
+
+    private async void SessionNotifierOnNewSessionOpened()
     {
-        ClientSessions = (await ClientSessionService.GetClientSessions()).ToList();
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        var json = JsonSerializer.Serialize(ClientSessions, options);
-        CurrentJson = json;
-        await InvokeAsync(StateHasChanged);
+        try
+        {
+            RemoteSessions = (await SessionManager.GetAll()).ToList();
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            var json = JsonSerializer.Serialize(RemoteSessions, options);
+            CurrentJson = json;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(
+                "UI Layer. AdminClientSessions.razor has failed to handle async update " +
+                "from SessionNotifier.NewSessionOpened. Ex: {ex}", e);
+        }
     }
 
     private async Task ClearClientSession()
     {
-        if(ClientSessions == null)
-            return;
-        foreach (var clientSession in ClientSessions)
-        {
-            await ClientSessionService.RemoveClientSession(clientSession.SessionId);
-        }
-        await InvokeAsync(StateHasChanged);
+        return;
+        
+        //if(RemoteSessions == null)
+        //    return;
+        //foreach (var clientSession in RemoteSessions)
+        //{
+        //    await ClientSessionService.RemoveClientSession(clientSession.SessionId);
+        //}
+        //await InvokeAsync(StateHasChanged);
     }
 }

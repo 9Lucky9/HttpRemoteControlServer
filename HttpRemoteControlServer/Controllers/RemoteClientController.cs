@@ -1,6 +1,7 @@
 using System.Text.Json;
 using HttpRemoteControl.Library.Models.Requests;
 using HttpRemoteControlServer.Contracts;
+using HttpRemoteControlServer.Domain;
 using HttpRemoteControlServer.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,15 +9,15 @@ namespace HttpRemoteControlServer.Controllers;
 
 [ApiController]
 [Route("[controller]/[action]")]
-public sealed class ClientController : ControllerBase
+public sealed class RemoteClientController : ControllerBase
 {
-    private readonly ILogger<ClientController> _logger;
-    private readonly IRemoteClientService _remoteClientService;
+    private readonly ILogger<RemoteClientController> _logger;
+    private readonly IRemoteClientManager _remoteClientManager;
 
-    public ClientController(ILogger<ClientController> logger, IRemoteClientService remoteClientService)
+    public RemoteClientController(ILogger<RemoteClientController> logger, IRemoteClientManager remoteClientManager)
     {
         _logger = logger;
-        _remoteClientService = remoteClientService;
+        _remoteClientManager = remoteClientManager;
     }
     
     [HttpPost]
@@ -27,7 +28,7 @@ public sealed class ClientController : ControllerBase
             var receivedJson = JsonSerializer.Serialize(remoteClientRegistrationRequest);
             _logger.LogInformation(
                 "Received request to register new client. Json: {json}", receivedJson);
-            var clientGuid = await _remoteClientService.RegisterClient(remoteClientRegistrationRequest);
+            var clientGuid = await _remoteClientManager.RegisterClient(remoteClientRegistrationRequest);
             var clientJson = JsonSerializer.Serialize(remoteClientRegistrationRequest);
             _logger.LogInformation(
                 "Successfully registered client: {clientJson}. With id: {id}", clientJson, clientGuid);
@@ -49,7 +50,7 @@ public sealed class ClientController : ControllerBase
         try
         {
             _logger.LogInformation("Received request to dequeue command.");
-            var command = await _remoteClientService.DequeueCommand(commandRequest);
+            var command = await _remoteClientManager.DequeueCommand(commandRequest);
             return Ok(command);
         }
         catch (InvalidOperationException)
@@ -74,22 +75,22 @@ public sealed class ClientController : ControllerBase
         try
         {
             _logger.LogInformation("Received request to write command result.");
-            await _remoteClientService.WriteCommandResult(pushCommandResultRequest);
+            await _remoteClientManager.WriteCommandResult(pushCommandResultRequest);
             return NoContent();
         }
-        catch (CommandNotFoundException e)
+        catch (EntityNotFoundException<RemoteClient> e)
+        {
+            _logger.LogError(
+                "Error occured during writing command result. RemoteClient with id: {Id} is not found", 
+                pushCommandResultRequest.ClientId);
+            return BadRequest("");
+        }
+        catch (EntityNotFoundException<Command> e)
         {
             _logger.LogError(
                 "Error occured during writing command result. Command with id: {commandId} is not found", 
                 pushCommandResultRequest.CommandId);
             return BadRequest($"Command with id: {pushCommandResultRequest.CommandId} is not found");
-        }
-        catch (ClientSessionNotFoundException e)
-        {
-            _logger.LogError(
-                "Error occured during writing command result. Command with id: {commandId} is not found", 
-                pushCommandResultRequest.CommandId);
-            return BadRequest("");
         }
         catch (Exception e)
         {

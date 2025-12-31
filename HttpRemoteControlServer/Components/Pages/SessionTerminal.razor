@@ -1,11 +1,13 @@
 @page "/session/{sessionId}"
 @rendermode InteractiveServer
 
-@using HttpRemoteControl.Library.Models
 @using HttpRemoteControl.Library.Models.Requests
 @using HttpRemoteControlServer.Contracts
 @using HttpRemoteControlServer.Domain
-@inject IClientSessionService ClientSessionService
+
+@inject ILogger<SessionTerminal> Logger;
+@inject ISessionManager SessionManager
+@inject ISessionNotifier SessionNotifier
 @inject IJSRuntime JS
 
 <div class="container mt-4">
@@ -14,7 +16,7 @@
         <div class="card-header border-secondary d-flex justify-content-between align-items-center">
             <span class="font-weight-bold">
                 <i class="oi oi-terminal mr-2"></i>
-                @(ClientSession?.RemoteClient?.MachineInfo?.PrettyName ?? "Connecting...")
+                @(RemoteSession?.RemoteClient?.MachineInfo?.PrettyName ?? "Connecting...")
             </span>
             <span class="badge badge-success">Connected</span>
         </div>
@@ -25,7 +27,7 @@
             {
                 <div class="terminal-line">
                     <span class="text-info font-weight-bold">
-                        @(ClientSession?.RemoteClient?.MachineInfo?.User)@{"@"}{}:~$
+                        @(RemoteSession?.RemoteClient?.MachineInfo?.User)@{"@"}{}:~$
                     </span>
                     <span class="ml-2">@line</span>
                 </div>
@@ -58,41 +60,44 @@
 @code {
     [Parameter] public string? SessionId { get; set; }
 
-    private RemoteClientSession? ClientSession { get; set; }
-    private RemoteClient RemoteClient => ClientSession!.RemoteClient;
+    private RemoteClientSession? RemoteSession { get; set; }
+    private RemoteClient RemoteClient => RemoteSession!.RemoteClient;
     
     private List<string> _terminalLines = new();
     private string _currentCommand = "";
     private bool _isProcessing = false;
     
-    protected async override Task OnInitializedAsync()
+    
+    protected override async Task OnInitializedAsync()
     {
         if (Guid.TryParse(SessionId, out var guid))
         {
-            ClientSession = await ClientSessionService.GetClientSession(guid);
+            RemoteSession = await SessionManager.Get(guid);
         }
 
         // Initial welcome message
         _terminalLines.Add("Remote Session Established.");
         _terminalLines.Add("Type 'help' for available commands.");
 
-        ClientSessionService.StateChanged += ClientSessionServiceOnStateChanged;;
+        SessionNotifier.NewCommandResult += SessionNotifierOnNewCommandResult;;
     }
 
-    private void ClientSessionServiceOnStateChanged(object? sender, EventArgs e)
+    private async void SessionNotifierOnNewCommandResult()
     {
-        //У нас сначала вводится команда в инпут, она идёт в enqueue.
-        //StateChanged()
-        //Её подхватывает клиент dequeue
-        //StateChanged()
-        //Клиент при успешном выполнении WritePushCommandResult
-        //StateChanged()
-        //При каждом стейт changed нужно заново присваивать ClientSession
-        
-        //Как отрисовать?
-        //Либо ререндер, либо append.
-        //Посмотрим append.
-        throw new NotImplementedException();
+        try
+        {
+            if (Guid.TryParse(SessionId, out var guid))
+            {
+                RemoteSession = await SessionManager.Get(guid);
+            }
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                "UI Layer. SessionTerminal.razor has failed to handle async update " +
+                "from SessionNotifier.NewCommandResult. Ex: {ex}", ex);
+        }
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
@@ -118,13 +123,13 @@
         
         var commandEnqueueRequest = new CommandEnqueueRequest
         { 
-            SessionId = ClientSession.SessionId, 
+            SessionId = RemoteSession.SessionId, 
             ClientId = RemoteClient.Id, 
             FileName = fileName, 
             Args = args
         };
         
-        await ClientSessionService.EnqueueCommand(commandEnqueueRequest);
+        await SessionManager.EnqueueCommand(commandEnqueueRequest);
         
         _isProcessing = false;
 

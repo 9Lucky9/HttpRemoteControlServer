@@ -1,5 +1,6 @@
 using HttpRemoteControl.Library.Models;
 using HttpRemoteControlServer.Contracts;
+using HttpRemoteControlServer.Domain;
 using HttpRemoteControlServer.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,13 +10,11 @@ namespace HttpRemoteControlServer.Controllers;
 [Route("[controller]/{sessionId}/[action]")]
 public sealed class LogController : ControllerBase
 {
-    private readonly ILogger<ClientSessionController> _logger;
-    private readonly IClientSessionService _clientSessionService;
+    private readonly ILogger<LogController> _logger;
 
-    public LogController(ILogger<ClientSessionController> logger, IClientSessionService clientSessionService)
+    public LogController(ILogger<LogController> logger)
     {
         _logger = logger;
-        _clientSessionService = clientSessionService;
     }
 
     [HttpPost]
@@ -25,14 +24,14 @@ public sealed class LogController : ControllerBase
         {
             _logger.LogInformation("Received request to post log.");
             throw new NotImplementedException();
-            //await _clientSessionService.WriteLogToClient(logDto);
+            //await _RemoteSessionService.WriteLogToClient(logDto);
             return NoContent();
         }
-        catch (ClientSessionNotFoundException)
+        catch (EntityNotFoundException<RemoteClientSession>)
         {
             _logger.LogError(
-                "ClientSession with id {id} is not found.", logDto.SessionId);
-            return BadRequest($"ClientSession with id {logDto.SessionId} is not found.");
+                "RemoteSession with id {id} is not found.", logDto.SessionId);
+            return BadRequest($"RemoteSession with id {logDto.SessionId} is not found.");
         }
         catch (Exception e)
         {
@@ -48,18 +47,19 @@ public sealed class LogController : ControllerBase
     {
         try
         {
-            _logger.LogInformation("Received request to post log.");
+            _logger.LogInformation(
+                "Received request to get all logs from session. Id: {sessionId}", sessionId);
             var guid = Guid.Parse(sessionId);
             //var logs =
-            //    await _clientSessionService.GetLogsFromClientSession(guid);
+            //    await _RemoteSessionService.GetLogsFromRemoteSession(guid);
             return Ok();
             // Ok(logs);
         }
-        catch (ClientSessionNotFoundException)
+        catch (EntityNotFoundException<RemoteClientSession>)
         {
             _logger.LogError(
-                "Get all logs from clientSession with sessionId: {sessionId} is not found.", sessionId);
-            return BadRequest($"ClientSession with sessionId: {sessionId} is not found.");   
+                "Get all logs from remoteSession with Id: {sessionId} is not found.", sessionId);
+            return BadRequest($"RemoteSession with Id: {sessionId} is not found.");   
         }
         catch (Exception e)
         {

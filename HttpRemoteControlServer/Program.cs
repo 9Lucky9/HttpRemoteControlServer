@@ -5,6 +5,7 @@ using HttpRemoteControlServer.Contracts;
 using HttpRemoteControlServer.Middlewares;
 using HttpRemoteControlServer.Options;
 using HttpRemoteControlServer.Services;
+using HttpRemoteControlServer.Services.ClientSide;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,13 +20,14 @@ builder.Services.Configure<MonoEndpointOptions>(
 
 #endregion
 
-
-//builder.Services.AddHttpContextAccessor();
-builder.Services.AddTransient<EncryptedMonoEndpointService>();
-
-builder.Services.AddSingleton<IClientSessionService, ClientSessionService>();
-builder.Services.AddTransient<IRemoteClientService, RemoteClientService>();
 builder.Services.AddTransient<IEncryptor, AesEncryptor>();
+
+builder.Services.AddSingleton<ISessionNotifier, SessionNotifier>();
+builder.Services.AddScoped<IRemoteClientManager, RemoteClientManager>();
+builder.Services.AddScoped<ISessionManager, SessionManager>();
+
+builder.Services.AddScoped<EncryptedMonoEndpointService>();
+
 
 builder.Services.AddRouting(options =>
 {
@@ -52,8 +54,8 @@ app.MapOpenApi();
 app.UseSwaggerUI(o => 
     o.SwaggerEndpoint("/openapi/v1.json", "HttpRemoteControlServer API"));
 
-var clientSessionService = app.Services.GetRequiredService<IClientSessionService>();
-await clientSessionService.CreateTestStaticClientSession();
+var sessionManager = app.Services.GetService<ISessionManager>();
+await sessionManager!.CreateTestStaticSession();
 
 if (!app.Environment.IsDevelopment())
 {

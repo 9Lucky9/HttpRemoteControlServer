@@ -2,6 +2,7 @@
 using HttpRemoteControl.Library.Models.Requests;
 using HttpRemoteControlServer.Exceptions;
 using HttpRemoteControlServer.Services;
+using HttpRemoteControlServer.Services.ClientSide;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HttpRemoteControlServer.Controllers;
@@ -10,10 +11,10 @@ namespace HttpRemoteControlServer.Controllers;
 [Route("api/[action]")]
 public sealed class MonoEndpointController : ControllerBase
 {
-    private readonly ILogger<AdminController> _logger;
+    private readonly ILogger<MonoEndpointController> _logger;
     private readonly EncryptedMonoEndpointService _service;
 
-    public MonoEndpointController(ILogger<AdminController> logger, EncryptedMonoEndpointService service)
+    public MonoEndpointController(ILogger<MonoEndpointController> logger, EncryptedMonoEndpointService service)
     {
         _logger = logger;
         _service = service;

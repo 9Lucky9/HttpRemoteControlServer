@@ -48,6 +48,7 @@ public class RemoteClientSession
             x => x.DequeuedAt == DateTime.MinValue);
         if (command == null)
             throw new QueueEmptyException();
+        command.DequeuedAt = DateTime.UtcNow;
         return command;
     }
 
@@ -55,7 +56,7 @@ public class RemoteClientSession
     {
         var command = Commands.FirstOrDefault(x => x.Id == commandId);
         if (command == null)
-            throw new CommandNotFoundException(
+            throw new EntityNotFoundException<Command>(
                 $"Writing result to command is failed. command not found. Id: {commandId}");
         command.Result = result;
     }

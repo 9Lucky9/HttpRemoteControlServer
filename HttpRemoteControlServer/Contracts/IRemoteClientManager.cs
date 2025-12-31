@@ -3,7 +3,7 @@ using HttpRemoteControl.Library.Models.Responses;
 
 namespace HttpRemoteControlServer.Contracts;
 
-public interface IRemoteClientService
+public interface IRemoteClientManager
 {
     Task<ClientRegistrationResponse> RegisterClient(RemoteClientRegistrationRequest request);
     Task<DequeuedCommandResponse> DequeueCommand(DequeueCommandRequest dequeueCommandRequest);

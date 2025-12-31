@@ -6,22 +6,28 @@ using HttpRemoteControlServer.Domain;
 using HttpRemoteControlServer.Exceptions;
 using Microsoft.EntityFrameworkCore;
 
-namespace HttpRemoteControlServer.Services;
+namespace HttpRemoteControlServer.Services.ClientSide;
 
-public sealed class RemoteClientService : IRemoteClientService
+public sealed class RemoteClientManager : IRemoteClientManager
 {
-    private readonly ServerContext _serverContext;
+    private readonly ILogger<RemoteClientManager> _logger;
+    private readonly IDbContextFactory<ServerContext> _contextFactory;
+    private readonly ISessionNotifier _sessionNotifier;
 
-    public RemoteClientService(ServerContext serverContext)
+    public RemoteClientManager(ILogger<RemoteClientManager> logger, IDbContextFactory<ServerContext> contextFactory, ISessionNotifier sessionNotifier)
     {
-        _serverContext = serverContext;
+        _logger = logger;
+        _contextFactory = contextFactory;
+        _sessionNotifier = sessionNotifier;
     }
 
     public async Task<ClientRegistrationResponse> RegisterClient(
         RemoteClientRegistrationRequest request)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
         RemoteClient? remoteClient;
-        remoteClient = await _serverContext.RemoteClients
+        remoteClient = await context.RemoteClients
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == request.UniqueClientId);
         
@@ -37,9 +43,11 @@ public sealed class RemoteClientService : IRemoteClientService
         var remoteSession = 
             RemoteClientSession.Open(remoteClient);
         
-        await _serverContext.RemoteClients.AddAsync(remoteClient);
-        await _serverContext.RemoteSessions.AddAsync(remoteSession);
-        await _serverContext.SaveChangesAsync();
+        await context.RemoteClients.AddAsync(remoteClient);
+        await context.RemoteSessions.AddAsync(remoteSession);
+        await context.SaveChangesAsync();
+        
+        _sessionNotifier.NotifyNewSessionOpened();
         return new ClientRegistrationResponse()
         {
             SessionId = remoteSession.SessionId,
@@ -48,14 +56,16 @@ public sealed class RemoteClientService : IRemoteClientService
 
     public async Task<DequeuedCommandResponse> DequeueCommand(DequeueCommandRequest dequeueCommandRequest)
     {
-        var remoteClient = await _serverContext.RemoteClients
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var remoteClient = await context.RemoteClients
             .AsNoTracking()
             .FirstOrDefaultAsync();
         if (remoteClient == null)
             throw new ArgumentException(
                 $"Remote client not found. Id: {dequeueCommandRequest.RemoteClientUniqueId}");
 
-        var remoteSession = await _serverContext.RemoteSessions
+        var remoteSession = await context.RemoteSessions
             .Include(remoteClientSessionEntity => remoteClientSessionEntity.Commands)
             .FirstOrDefaultAsync();
         if (remoteSession == null)
@@ -64,7 +74,7 @@ public sealed class RemoteClientService : IRemoteClientService
 
         var dequeudCommand = remoteSession.DequeueCommand();
         
-        await _serverContext.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
         var response = new DequeuedCommandResponse()
         {
@@ -77,12 +87,14 @@ public sealed class RemoteClientService : IRemoteClientService
 
     public async Task WriteCommandResult(PushCommandResultRequest request)
     {
-        var remoteClient = await _serverContext.RemoteClients
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        
+        var remoteClient = await context.RemoteClients
             .Include(x => x.Sessions)
             .ThenInclude(remoteClientSession => remoteClientSession.Commands)
             .FirstOrDefaultAsync();
         if (remoteClient == null)
-            throw new ArgumentException(
+            throw new EntityNotFoundException<RemoteClient>(
                 $"Remote client not found. Id: {request.ClientId}");
         
         var remoteSession = remoteClient
@@ -100,9 +112,10 @@ public sealed class RemoteClientService : IRemoteClientService
             remoteSession.Commands.FirstOrDefault(x => x.Id == request.CommandId);
 
         if (command == null)
-            throw new CommandNotFoundException($"Command not found. Id: {request.CommandId}");
+            throw new EntityNotFoundException<Command>($"Command not found. Id: {request.CommandId}");
         
         command.Result = request.Result;
-        await _serverContext.SaveChangesAsync();
+        await context.SaveChangesAsync();
+        _sessionNotifier.NotifyNewCommandResult();
     }
 }

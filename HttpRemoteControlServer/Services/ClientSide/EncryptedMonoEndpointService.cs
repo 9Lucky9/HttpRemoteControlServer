@@ -7,21 +7,21 @@ using HttpRemoteControlServer.Exceptions;
 using HttpRemoteControlServer.Options;
 using Microsoft.Extensions.Options;
 
-namespace HttpRemoteControlServer.Services;
+namespace HttpRemoteControlServer.Services.ClientSide;
 
 public sealed class EncryptedMonoEndpointService
 {
     private readonly ILogger<EncryptedMonoEndpointService> _logger;
     private readonly IOptionsSnapshot<MonoEndpointOptions> _options;
     private readonly IEncryptor _encryptor;
-    private readonly IRemoteClientService _remoteClientService;
+    private readonly IRemoteClientManager _remoteClientManager;
 
-    public EncryptedMonoEndpointService(ILogger<EncryptedMonoEndpointService> logger, IOptionsSnapshot<MonoEndpointOptions> options, IEncryptor encryptor, IRemoteClientService remoteClientService)
+    public EncryptedMonoEndpointService(ILogger<EncryptedMonoEndpointService> logger, IOptionsSnapshot<MonoEndpointOptions> options, IEncryptor encryptor, IRemoteClientManager remoteClientManager)
     {
         _logger = logger;
         _options = options;
         _encryptor = encryptor;
-        _remoteClientService = remoteClientService;
+        _remoteClientManager = remoteClientManager;
     }
 
     public async Task<string> ProcessEncryptedJson(string encryptedJson)
@@ -49,17 +49,17 @@ public sealed class EncryptedMonoEndpointService
             "/client/register-me" =>
                 await Process<RemoteClientRegistrationRequest, ClientRegistrationResponse>(
                     monoRequest,
-                    _remoteClientService.RegisterClient),
+                    _remoteClientManager.RegisterClient),
             
             "/client/dequeue-command" =>
                 await Process<DequeueCommandRequest, DequeuedCommandResponse>(
                     monoRequest,
-                    _remoteClientService.DequeueCommand),
+                    _remoteClientManager.DequeueCommand),
             
             "/client/write-command-result" =>
                 await Process<PushCommandResultRequest>(
                     monoRequest,
-                    _remoteClientService.WriteCommandResult),
+                    _remoteClientManager.WriteCommandResult),
             _ => throw new MonoEndpointException(
                 $"monoRequest.Path was not recognized: {monoRequest.Path}")
         };

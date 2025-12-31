@@ -5,7 +5,8 @@
 @using HttpRemoteControlServer.Domain
 
 @inject ILogger<Sessions> Logger;
-@inject IClientSessionService ClientSessionService
+@inject ISessionManager SessionManager;
+@inject ISessionNotifier SessionNotifier;
 @inject NavigationManager NavManager
 
 
@@ -15,18 +16,18 @@
 
 <div class="view">
     @{
-        if (ClientSessions == null)
+        if (RemoteSessions == null)
         {
             <div>
                 <h2>No sessions open right now. Waiting for session to open...</h2>
             </div>
         }
-        if (ClientSessions != null)
+        if (RemoteSessions != null)
         {
-            foreach (var clientSession in ClientSessions)
+            foreach (var clientSession in RemoteSessions)
             {
                 <button class="session-button" type="button" 
-                        @onclick="() => { OpenSession(clientSession.SessionId); }"
+                        @onclick="() => { NavigateToSessionPage(clientSession.SessionId); }"
                         aria-label="Открыть сессию Ubuntu 24.04">
                     <div class="session-content">
                         <div class="session-info">
@@ -47,73 +48,37 @@
 
 @code {
 
-    private List<RemoteClientSession>? ClientSessions { get; set; }
+    private List<RemoteClientSession>? RemoteSessions { get; set; }
 
     
-    protected async override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
-        var clientSessions = 
-            await ClientSessionService.GetClientSessions();
-        ClientSessions = clientSessions.ToList();
-        ClientSessionService.StateChanged += ClientSessionServiceOnStateChanged;
+        var session = await SessionManager.GetAll();
+        RemoteSessions = session.ToList();
+
+        SessionNotifier.NewSessionOpened += SessionNotifierOnNewSessionOpened;;;
     }
 
-    private async void ClientSessionServiceOnStateChanged(object? sender, EventArgs e)
+    private async void SessionNotifierOnNewSessionOpened()
     {
         try
         {
             var clientSessions = 
-                await ClientSessionService.GetClientSessions();
-            ClientSessions = clientSessions.ToList();
+                await SessionManager.GetAll();
+            RemoteSessions = clientSessions.ToList();
             StateHasChanged();
         }
         catch (Exception ex)
         {
             Logger.LogError(
-                "UI Layer. Sessions.razor has failed to async handle update from ClientSessionService. Ex: {ex}", ex);
+                "UI Layer. Sessions.razor has failed to handle async update from ClientSessionService. Ex: {ex}", ex);
         }
     }
 
 
-    private void OpenSession(Guid sessionId)
+    private void NavigateToSessionPage(Guid sessionId)
     {
         NavManager.NavigateTo($"/session/{sessionId}", new NavigationOptions());
     }
-
-
-    //private static List<ClientSession> TestClientSessions()
-    //{
-    //    return new List<ClientSession>()
-    //    {
-    //        new ClientSession()
-    //        {
-    //            SessionId = Guid.NewGuid(),
-    //            Client = new Client()
-    //            {
-    //                Id = Guid.NewGuid(),
-    //                MachineInfo = new MachineInfo()
-    //                {
-    //                    PrettyName = "Debian GNU/Linux 12 (bookworm)",
-    //                    IpAddress = "172.20.17.130",
-    //                    HostName = "k8s-controlplane01"
-    //                }
-    //            },
-    //            OpenedDate = DateTime.UtcNow - TimeSpan.FromMinutes(5)
-    //        },
-    //        new ClientSession()
-    //        {
-    //            SessionId = Guid.NewGuid(),
-    //            Client = new Client()
-    //            {
-    //                Id = Guid.NewGuid(),
-    //                MachineInfo = new MachineInfo()
-    //                {
-    //                    
-    //                }
-    //            },
-    //            OpenedDate = DateTime.UtcNow - TimeSpan.FromSeconds(30)
-    //        }
-    //    };
-    //}
 
 }
